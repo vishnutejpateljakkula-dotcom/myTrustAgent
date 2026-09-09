@@ -52,6 +52,10 @@ uvicorn backend.main:app --reload --port 8000
 
 Open `http://localhost:8000`. FastAPI serves both the React interface and the `/api` endpoints from the same address. During UI-only development, `cd frontend; npm run dev` still starts Vite separately on port 5173; set `VITE_API_URL=http://localhost:8000` for that workflow.
 
+## Vercel deployment
+
+Import the repository from its root directory. The included Vercel configuration builds the Vite app from `frontend/`, serves it from `frontend/dist`, and exposes the FastAPI app through `api/index.py` at `/api/*`. In Vercel Project Settings, add `LLM_PROVIDER=gemini`, `GEMINI_API_KEY`, and `GEMINI_MODEL` as environment variables; do not upload the local `.env` file. Leave the Root Directory unset and remove any dashboard Build Command override so the committed `vercel.json` controls the build.
+
 ## Environment variables
 
 Copy `.env.example` to `.env`. API keys are optional and remain on the backend. For Gemini, set `LLM_PROVIDER=gemini`, add `GEMINI_API_KEY`, and optionally choose `GEMINI_MODEL`. For an OpenAI-compatible provider, set `LLM_PROVIDER=openai` with `LLM_API_KEY`, `LLM_BASE_URL`, and `LLM_MODEL`. Without a key, TrustAgent runs deterministic safe demo mode. Never add `.env` to version control or expose its key in the frontend.
