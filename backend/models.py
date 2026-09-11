@@ -33,3 +33,4 @@ class AnalyzeResponse(BaseModel):
     evidence: list[Evidence]
     agent_analysis: dict[str, str]
     demo_mode: bool
+    service_warnings: list[str] = Field(default_factory=list)

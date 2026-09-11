@@ -1,4 +1,4 @@
-import asyncio
+import html
 import re
 from urllib.parse import quote
 import httpx
@@ -11,22 +11,58 @@ def orchestrate(question: str) -> str:
 
 
 async def retrieve(question: str) -> list[Evidence]:
-    """Small public retrieval adapter; failure intentionally falls back to demo mode."""
-    try:
-        async with httpx.AsyncClient(timeout=8, headers={"User-Agent": "TrustAgentDemo/1.0"}) as client:
-            response = await client.get("https://en.wikipedia.org/w/api.php", params={
-                "action": "query", "list": "search", "srsearch": question, "srlimit": 3, "format": "json",
-            })
-            response.raise_for_status()
-            results = response.json().get("query", {}).get("search", [])
-            evidence = []
-            for item in results:
-                title = item["title"]
-                snippet = re.sub(r"<[^>]+>", "", item.get("snippet", ""))
-                evidence.append(Evidence(title=title, url=f"https://en.wikipedia.org/wiki/{quote(title.replace(' ', '_'))}", snippet=snippet or "Relevant encyclopedia entry.", quality="Medium"))
-            return evidence
-    except (httpx.HTTPError, KeyError, TypeError):
-        return []
+    """Public retrieval for non-grounded providers and demo mode."""
+    headers = {
+        "User-Agent": "TrustAgent/1.0 (https://github.com/vishnutejpateljakkula-dotcom/myTrustAgent; trustagent@example.com)",
+        "Accept": "application/json",
+    }
+    cleaned = re.sub(r"[^\w\s-]", " ", question).strip()
+    queries = [question]
+    simplified = re.sub(
+        r"^(who|what|where|when|why|how|is|are|was|were|can you tell me|explain|describe)\s+(is|are|was|were|the|a|an)?\s*",
+        "",
+        cleaned,
+        flags=re.IGNORECASE,
+    ).strip()
+    if simplified and simplified.casefold() != question.casefold():
+        queries.append(simplified)
+
+    for q in queries:
+        try:
+            async with httpx.AsyncClient(timeout=6.0, headers=headers) as client:
+                response = await client.get(
+                    "https://en.wikipedia.org/w/api.php",
+                    params={
+                        "action": "query",
+                        "list": "search",
+                        "srsearch": q,
+                        "srlimit": 4,
+                        "format": "json",
+                    },
+                )
+                response.raise_for_status()
+                results = response.json().get("query", {}).get("search", [])
+                if not results:
+                    continue
+                evidence = []
+                for item in results:
+                    title = item.get("title", "")
+                    raw_snippet = item.get("snippet", "")
+                    clean_text = html.unescape(re.sub(r"<[^>]+>", "", raw_snippet)).strip()
+                    quality = "High" if len(clean_text) > 70 else "Medium"
+                    evidence.append(
+                        Evidence(
+                            title=title,
+                            url=f"https://en.wikipedia.org/wiki/{quote(title.replace(' ', '_'))}",
+                            snippet=clean_text or "Relevant encyclopedia entry.",
+                            quality=quality,
+                        )
+                    )
+                if evidence:
+                    return evidence
+        except (httpx.HTTPError, KeyError, TypeError):
+            continue
+    return []
 
 
 def demo_answer(question: str) -> str:
@@ -36,9 +72,9 @@ def demo_answer(question: str) -> str:
     return f"This is a demo preliminary answer to: {question} The conclusion needs source-based verification."
 
 
-async def research_agent(question: str, evidence: list[Evidence], ai: AIService) -> tuple[str, str, bool]:
+async def research_agent(question: str, evidence: list[Evidence], ai: AIService, *, use_ai: bool = True) -> tuple[str, str, bool]:
     context = "\n".join(f"- {x.title}: {x.snippet}" for x in evidence) or "No retrieval results were available."
-    if ai.available:
+    if use_ai and ai.available:
         try:
             initial = await ai.complete(
                 "Give a concise preliminary answer. Do not invent citations or claim verification. "

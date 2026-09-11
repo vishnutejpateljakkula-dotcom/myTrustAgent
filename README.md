@@ -54,11 +54,11 @@ Open `http://localhost:8000`. FastAPI serves both the React interface and the `/
 
 ## Vercel deployment
 
-Import the repository from its root directory. The included Vercel configuration builds the Vite app from `frontend/`, serves it from `frontend/dist`, and exposes the FastAPI app through `api/index.py` at `/api/*`. In Vercel Project Settings, add `LLM_PROVIDER=gemini`, `GEMINI_API_KEY`, and `GEMINI_MODEL` as environment variables; do not upload the local `.env` file. Leave the Root Directory unset and remove any dashboard Build Command override so the committed `vercel.json` controls the build.
+Import the repository from its root directory. The included Vercel configuration builds the Vite app from `frontend/`, serves it from `frontend/dist`, and explicitly rewrites `/api/*` to the FastAPI entry point in `api/index.py`. In Vercel Project Settings, add `LLM_PROVIDER=gemini`, `GEMINI_API_KEY`, and `GEMINI_MODEL` as environment variables; do not upload the local `.env` file. Leave the Root Directory unset and remove any dashboard Build Command or Output Directory override so the committed `vercel.json` controls the build. After each configuration change, redeploy and confirm that `/api/health` returns JSON before using the UI.
 
 ## Environment variables
 
-Copy `.env.example` to `.env`. API keys are optional and remain on the backend. For Gemini, set `LLM_PROVIDER=gemini`, add `GEMINI_API_KEY`, and optionally choose `GEMINI_MODEL`. For an OpenAI-compatible provider, set `LLM_PROVIDER=openai` with `LLM_API_KEY`, `LLM_BASE_URL`, and `LLM_MODEL`. Without a key, TrustAgent runs deterministic safe demo mode. Never add `.env` to version control or expose its key in the frontend.
+Copy `.env.example` to `.env`. API keys are optional and remain on the backend. For Groq, set `LLM_PROVIDER=groq`, add `GROQ_API_KEY`, and optionally choose `GROQ_MODEL`; the app uses Groq's OpenAI-compatible endpoint. For Gemini, set `LLM_PROVIDER=gemini`, add `GEMINI_API_KEY`, and optionally choose `GEMINI_MODEL`. For another OpenAI-compatible provider, set `LLM_PROVIDER=openai` with `LLM_API_KEY`, `LLM_BASE_URL`, and `LLM_MODEL`. Without a key, TrustAgent runs deterministic safe demo mode. Never add `.env` to version control or expose its key in the frontend.
 
 ## API
 
